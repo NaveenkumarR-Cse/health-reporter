@@ -3,16 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Plus, Upload, Wifi, WifiOff, CheckCircle2 } from "lucide-react";
-import { useState, useRef } from "react";
+import { MapPin, Plus, Wifi, WifiOff, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
 import { useHealthData } from "@/context/HealthDataContext";
 import { useToast } from "@/hooks/use-toast";
 
 const HealthWorker = () => {
   const [isOnline] = useState(true);
-  const { cases, addCase, addCasesFromCSV } = useHealthData();
+  const { cases, addCase } = useHealthData();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -63,54 +62,6 @@ const HealthWorker = () => {
     setForm({ name: "", age: "", village: "", disease: "", severity: "", lat: undefined, lng: undefined });
   };
 
-  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split("\n").filter(l => l.trim());
-      if (lines.length < 2) {
-        toast({ title: "Invalid CSV", description: "CSV must have a header row and at least one data row.", variant: "destructive" });
-        return;
-      }
-      
-      const header = lines[0].toLowerCase().split(",").map(h => h.trim());
-      const nameIdx = header.findIndex(h => h.includes("name"));
-      const ageIdx = header.findIndex(h => h.includes("age"));
-      const villageIdx = header.findIndex(h => h.includes("village"));
-      const diseaseIdx = header.findIndex(h => h.includes("disease"));
-      const severityIdx = header.findIndex(h => h.includes("severity"));
-
-      if (nameIdx === -1 || ageIdx === -1 || villageIdx === -1 || diseaseIdx === -1) {
-        toast({ title: "Invalid CSV format", description: "CSV must have columns: name, age, village, disease. Severity is optional.", variant: "destructive" });
-        return;
-      }
-
-      const newCases = lines.slice(1).map(line => {
-        const cols = line.split(",").map(c => c.trim());
-        return {
-          name: cols[nameIdx] || "Unknown",
-          age: Number(cols[ageIdx]) || 0,
-          village: cols[villageIdx] || "Unknown",
-          disease: cols[diseaseIdx] || "Unknown",
-          severity: severityIdx !== -1 ? cols[severityIdx] || "mild" : "mild",
-        };
-      }).filter(c => c.name && c.village);
-
-      if (newCases.length === 0) {
-        toast({ title: "No valid rows", description: "No valid data found in CSV.", variant: "destructive" });
-        return;
-      }
-
-      addCasesFromCSV(newCases);
-      toast({ title: "CSV Uploaded!", description: `${newCases.length} cases imported successfully.` });
-    };
-    reader.readAsText(file);
-    // Reset input
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -175,19 +126,9 @@ const HealthWorker = () => {
               </Button>
             </div>
           </div>
-          <div className="mt-4 flex gap-3">
+          <div className="mt-4">
             <Button className="gap-2" onClick={handleSubmit}>
               <CheckCircle2 className="w-4 h-4" /> Submit Case
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleCSVUpload}
-            />
-            <Button variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="w-4 h-4" /> Upload CSV
             </Button>
           </div>
         </div>
