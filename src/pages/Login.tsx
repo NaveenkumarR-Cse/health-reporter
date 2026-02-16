@@ -3,31 +3,47 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, LogIn } from "lucide-react";
+import { Shield, LogIn, Heart, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+
+type LoginTab = "health_worker" | "people";
 
 const Login = () => {
+  const [tab, setTab] = useState<LoginTab>("people");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simple local auth (replace with Firebase later)
     setTimeout(() => {
       setLoading(false);
-      if (email && password.length >= 6) {
-        toast({ title: "Welcome back!" });
-        navigate("/dashboard");
+      const success = login(email, password, tab);
+      if (success) {
+        toast({ title: tab === "health_worker" ? "Welcome, Health Worker!" : "Welcome back!" });
+        navigate(tab === "health_worker" ? "/health-worker" : "/checkup");
       } else {
-        toast({ title: "Login failed", description: "Please enter valid credentials.", variant: "destructive" });
+        toast({
+          title: "Login failed",
+          description: tab === "health_worker"
+            ? "Invalid health worker credentials."
+            : "Invalid credentials. Please sign up first.",
+          variant: "destructive",
+        });
       }
     }, 500);
   };
+
+  const tabs: { key: LoginTab; label: string; icon: React.ReactNode }[] = [
+    { key: "people", label: "People", icon: <Users className="w-4 h-4" /> },
+    { key: "health_worker", label: "Health Worker", icon: <Heart className="w-4 h-4" /> },
+  ];
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -40,6 +56,23 @@ const Login = () => {
           </Link>
           <h1 className="text-2xl font-heading font-bold">Welcome Back</h1>
           <p className="text-muted-foreground mt-1">Sign in to HealthGuard NE</p>
+        </div>
+
+        {/* Tab Selector */}
+        <div className="flex gap-2 mb-6">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => { setTab(t.key); setEmail(""); setPassword(""); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition-all ${
+                tab === t.key
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {t.icon} {t.label}
+            </button>
+          ))}
         </div>
 
         <div className="glass-card-elevated p-8">
@@ -56,10 +89,19 @@ const Login = () => {
               <LogIn className="w-4 h-4" /> {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-primary hover:underline">Sign Up</Link>
-          </p>
+
+          {tab === "people" && (
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-primary hover:underline">Sign Up</Link>
+            </p>
+          )}
+
+          {tab === "health_worker" && (
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              Health Worker accounts are managed by the admin.
+            </p>
+          )}
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
